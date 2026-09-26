@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"   # 5433 vì máy có thể đã có Postgres khác chiếm 5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Ba service dưới đây chỉ chạy khi dùng profile "app"; mỗi service đọc .env riêng của nó.
+  # environment: bên dưới ghi đè các địa chỉ localhost thành tên service trong mạng compose.
+  auth:
+    build: ./services/kruzetech-auth
+    profiles: ["app"]
+    env_file: ./services/kruzetech-auth/.env
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_auth
+      REDIS_HOST: redis
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  task:
+    build: ./services/kruzetech-task
+    profiles: ["app"]
+    env_file: ./services/kruzetech-task/.env
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_task
+    ports:
+      - "3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build: ./services/kruzetech-gateway
+    profiles: ["app"]
+    env_file: ./services/kruzetech-gateway/.env
+    environment:
+      PORT: "8080"   # cổng trong container; cổng máy là 8088
+      AUTH_SERVICE_URL: http://auth:3000
+      TASK_SERVICE_URL: http://task:3010
+    ports:
+      - "8088:8080"   # 8088 vì VMware (vmnat) chiếm 8080 trên máy dev
+    depends_on:
+      - auth
+      - task
+
+volumes:
+  pgdata:

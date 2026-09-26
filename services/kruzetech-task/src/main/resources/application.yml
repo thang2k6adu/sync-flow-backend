@@ -1,0 +1,44 @@
+server:
+  port: ${PORT:3010}
+  servlet:
+    context-path: /api
+
+spring:
+  config:
+    # Đọc file .env (ở thư mục service) nếu có; biến môi trường thật vẫn được ưu tiên.
+    import: optional:file:.env[.properties]
+  application:
+    name: kruzetech-task
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/kruzetech_task}
+    username: ${DB_USERNAME:kruzetech_task}
+    password: ${DB_PASSWORD:kruzetech_task}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+app:
+  jwt:
+    # Phải trùng JWT_SECRET của kruzetech-auth: service này chỉ verify access token, không tự cấp token.
+    secret: ${JWT_SECRET:}
+  cors:
+    origins: ${CORS_ORIGIN:*}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    path: /docs
+    enabled: ${SWAGGER_ENABLED:true}

@@ -1,0 +1,41 @@
+server:
+  port: ${PORT:8088}
+
+spring:
+  config:
+    # Đọc file .env (ở thư mục service) nếu có; biến môi trường thật vẫn được ưu tiên.
+    import: optional:file:.env[.properties]
+  application:
+    name: kruzetech-gateway
+  cloud:
+    gateway:
+      # Đường dẫn giữ nguyên /api/... vì các service đều có context-path /api,
+      # nên client chỉ cần đổi host sang gateway.
+      routes:
+        - id: auth
+          uri: ${AUTH_SERVICE_URL:http://localhost:3000}
+          predicates:
+            - Path=/api/auth/**,/api/users/**
+        - id: task
+          uri: ${TASK_SERVICE_URL:http://localhost:3010}
+          predicates:
+            - Path=/api/tasks/**
+      default-filters:
+        # CORS do gateway lo; tránh header bị lặp khi service cũng trả CORS.
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: ${CORS_ORIGIN:*}
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

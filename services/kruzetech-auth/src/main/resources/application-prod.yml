@@ -1,0 +1,14 @@
+spring:
+  cache:
+    type: redis
+app:
+  swagger-enabled: false
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+management:
+  health:
+    redis:
+      enabled: true

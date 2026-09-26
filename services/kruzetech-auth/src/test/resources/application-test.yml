@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:boilerplate;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  cache:
+    type: simple
+app:
+  jwt:
+    secret: test-access-secret-test-access-secret-0123
+    refresh-secret: test-refresh-secret-test-refresh-secret-0123
+    expires-in: 2h
+    refresh-expires-in: 7d
+  seed:
+    admin-email: admin@example.com
+    admin-password: admin123

@@ -1,0 +1,67 @@
+server:
+  port: ${PORT:3000}
+  servlet:
+    context-path: /api   # giống setGlobalPrefix('api') của nest-boilerplate
+
+spring:
+  config:
+    # Đọc file .env (ở thư mục service) nếu có; biến môi trường thật vẫn được ưu tiên.
+    import: optional:file:.env[.properties]
+  application:
+    name: ${APP_NAME:kruzetech-auth}
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/kruzetech_auth}
+    username: ${DB_USERNAME:kruzetech_auth}
+    password: ${DB_PASSWORD:kruzetech_auth}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  cache:
+    type: ${CACHE_TYPE:simple}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true   # giống forbidNonWhitelisted của Nest
+  servlet:
+    multipart:
+      max-file-size: 10MB
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    refresh-secret: ${JWT_REFRESH_SECRET:}
+    expires-in: ${JWT_EXPIRES_IN:2h}
+    refresh-expires-in: ${JWT_REFRESH_EXPIRES_IN:7d}
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:}
+    client-email: ${FIREBASE_CLIENT_EMAIL:}
+    private-key: ${FIREBASE_PRIVATE_KEY:}
+  cors:
+    origins: ${CORS_ORIGIN:*}
+  seed:
+    admin-email: ${SEED_ADMIN_EMAIL:}
+    admin-password: ${SEED_ADMIN_PASSWORD:}
+  swagger-enabled: ${SWAGGER_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  health:
+    redis:
+      enabled: ${REDIS_HEALTH:false}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    path: /docs
+    enabled: ${SWAGGER_ENABLED:true}
