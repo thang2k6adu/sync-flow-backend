@@ -1,7 +1,7 @@
 # ============================================================================
 # KRUZETECH Java Boilerplate - Local Development
 # ============================================================================
-# Run `make help` để xem tất cả commands. Theo quy ước của katech-billing-platform
+# Run `make help` để xem tất cả commands.
 # (setup / up / down / status / logs / run-<svc>).
 # ============================================================================
 

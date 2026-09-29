@@ -1,2 +1,40 @@
+# Environment (giữ .env.example)
 .env
+.env.*
+!.env.example
+
+# Gradle
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kết quả biên dịch của IDE (VS Code / Eclipse)
+bin/
+.classpath
+.project
+.settings/
+.factorypath
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Log
 logs/
+*.log
+
+# Khoá / chứng chỉ
+*.jks
+*.keystore
+*.p12
+*.pem
+firebase-service-account*.json
+*-firebase-adminsdk-*.json
+
+# OS
+.DS_Store
+Thumbs.db

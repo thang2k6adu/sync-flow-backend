@@ -1,6 +1,6 @@
 # java_boilerplate
 
-Bản Spring Boot của `nest-boilerplate`, tổ chức nhiều service trong một repo (giống katech-billing-platform).
+Bản Spring Boot của `nest-boilerplate`, tổ chức nhiều service trong một repo.
 Contract auth khớp Nest nên `flutter_boilerplate` gọi được nguyên trạng.
 
 ```
