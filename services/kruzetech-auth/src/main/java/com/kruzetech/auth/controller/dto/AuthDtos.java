@@ -16,10 +16,6 @@ public final class AuthDtos {
             @Schema(example = "John") String firstName,
             @Schema(example = "Doe") String lastName) {}
 
-    public record LoginRequest(
-            @Schema(example = "user@example.com") @NotBlank @Email String email,
-            @Schema(example = "password123") @NotBlank String password) {}
-
     public record RefreshTokenRequest(@NotBlank String refreshToken) {}
 
     public record FirebaseLoginRequest(
@@ -34,7 +30,7 @@ public final class AuthDtos {
 
     public record Tokens(String accessToken, String refreshToken, long expiresIn) {}
 
-    /** Dùng chung cho register / login / firebase login. */
+    /** Dùng chung cho register / firebase login. */
     public record AuthResponse(UserInfo user, Tokens tokens) {}
 
     public record MessageResponse(String message) {}

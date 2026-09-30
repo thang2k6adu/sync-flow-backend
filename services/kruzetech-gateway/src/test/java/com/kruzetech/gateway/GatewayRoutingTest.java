@@ -61,10 +61,10 @@ class GatewayRoutingTest {
         assertEquals("Bearer abc", t.getHeader("Authorization"));
         assertNotNull(t.getHeader("X-Trace-Id"));
 
-        client().post().uri("/api/auth/login").contentType(MediaType.APPLICATION_JSON).bodyValue("{}").exchange()
+        client().post().uri("/api/auth/firebase/login").contentType(MediaType.APPLICATION_JSON).bodyValue("{}").exchange()
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.from").isEqualTo("auth");
-        assertEquals("/api/auth/login", auth.takeRequest().getPath());
+        assertEquals("/api/auth/firebase/login", auth.takeRequest().getPath());
     }
 
     @Test

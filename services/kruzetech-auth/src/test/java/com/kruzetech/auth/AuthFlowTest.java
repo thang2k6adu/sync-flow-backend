@@ -42,7 +42,7 @@ class AuthFlowTest {
     }
 
     @Test
-    void registerLoginProfileRefreshLogout() throws Exception {
+    void registerProfileRefreshLogout() throws Exception {
         JsonNode reg = call(
                 json(post("/auth/register"), "{\"email\":\"a@example.com\",\"password\":\"secret1\",\"firstName\":\"A\"}"),
                 201);
@@ -52,19 +52,17 @@ class AuthFlowTest {
 
         call(json(post("/auth/register"), "{\"email\":\"a@example.com\",\"password\":\"secret1\"}"), 409);
 
-        JsonNode login = call(json(post("/auth/login"), "{\"email\":\"a@example.com\",\"password\":\"secret1\"}"), 200);
-        String access = login.at("/data/tokens/accessToken").asText();
-        String refresh = login.at("/data/tokens/refreshToken").asText();
-
-        call(json(post("/auth/login"), "{\"email\":\"a@example.com\",\"password\":\"wrong-pass\"}"), 401);
+        String access = reg.at("/data/tokens/accessToken").asText();
+        String refresh = reg.at("/data/tokens/refreshToken").asText();
 
         mvc.perform(get("/users/profile").header("Authorization", "Bearer " + access))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("a@example.com"));
 
         // token cũ/rác gửi kèm endpoint public không được làm hỏng request (Flutter gửi "Bearer null")
-        call(json(post("/auth/login").header("Authorization", "Bearer null"),
-                "{\"email\":\"a@example.com\",\"password\":\"secret1\"}"), 200);
+        when(firebase.verifyIdToken("good"))
+                .thenReturn(new FirebaseService.Identity("uid-a", "a@example.com", "A", null));
+        call(json(post("/auth/firebase/login").header("Authorization", "Bearer null"), "{\"idToken\":\"good\"}"), 200);
 
         JsonNode refreshed = call(json(post("/auth/refresh"), "{\"refreshToken\":\"" + refresh + "\"}"), 200);
         String newRefresh = refreshed.at("/data/refreshToken").asText();
@@ -107,7 +105,7 @@ class AuthFlowTest {
         org.junit.jupiter.api.Assertions.assertFalse(bad.get("traceId").asText().isEmpty());
 
         // field lạ bị từ chối như forbidNonWhitelisted của Nest
-        call(json(post("/auth/login"), "{\"email\":\"a@example.com\",\"password\":\"x\",\"extra\":1}"), 400);
+        call(json(post("/auth/firebase/login"), "{\"idToken\":\"x\",\"extra\":1}"), 400);
 
         JsonNode noToken = call(get("/users/profile"), 401);
         org.junit.jupiter.api.Assertions.assertEquals(401, noToken.get("code").asInt());
@@ -121,7 +119,9 @@ class AuthFlowTest {
 
     @Test
     void adminCanListAndPaginateUsers() throws Exception {
-        JsonNode login = call(json(post("/auth/login"), "{\"email\":\"admin@example.com\",\"password\":\"admin123\"}"), 200);
+        when(firebase.verifyIdToken("admin"))
+                .thenReturn(new FirebaseService.Identity("uid-admin", "admin@example.com", "Admin", null));
+        JsonNode login = call(json(post("/auth/firebase/login"), "{\"idToken\":\"admin\"}"), 200);
         String access = login.at("/data/tokens/accessToken").asText();
 
         mvc.perform(get("/users").param("page", "1").param("limit", "5").param("search", "ADMIN")

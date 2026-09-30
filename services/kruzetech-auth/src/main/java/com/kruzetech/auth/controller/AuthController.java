@@ -2,7 +2,6 @@ package com.kruzetech.auth.controller;
 
 import com.kruzetech.auth.controller.dto.AuthDtos.AuthResponse;
 import com.kruzetech.auth.controller.dto.AuthDtos.FirebaseLoginRequest;
-import com.kruzetech.auth.controller.dto.AuthDtos.LoginRequest;
 import com.kruzetech.auth.controller.dto.AuthDtos.LogoutRequest;
 import com.kruzetech.auth.controller.dto.AuthDtos.MessageResponse;
 import com.kruzetech.auth.controller.dto.AuthDtos.RefreshTokenRequest;
@@ -37,12 +36,6 @@ public class AuthController {
     @Operation(summary = "Register a new user")
     public AuthResponse register(@Valid @RequestBody RegisterRequest req) {
         return authService.register(req);
-    }
-
-    @PostMapping("/login")
-    @Operation(summary = "Login user")
-    public AuthResponse login(@Valid @RequestBody LoginRequest req) {
-        return authService.login(req);
     }
 
     @PostMapping("/firebase/login")

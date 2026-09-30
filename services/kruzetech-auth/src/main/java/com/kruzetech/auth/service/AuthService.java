@@ -2,7 +2,6 @@ package com.kruzetech.auth.service;
 
 import com.kruzetech.auth.controller.dto.AuthDtos.AuthResponse;
 import com.kruzetech.auth.controller.dto.AuthDtos.FirebaseLoginRequest;
-import com.kruzetech.auth.controller.dto.AuthDtos.LoginRequest;
 import com.kruzetech.auth.controller.dto.AuthDtos.RegisterRequest;
 import com.kruzetech.auth.controller.dto.AuthDtos.Tokens;
 import com.kruzetech.auth.controller.dto.AuthDtos.UserInfo;
@@ -55,15 +54,6 @@ public class AuthService {
         user.setFirstName(req.firstName());
         user.setLastName(req.lastName());
         return issue(users.save(user));
-    }
-
-    @Transactional
-    public AuthResponse login(LoginRequest req) {
-        User user = users.findByEmail(req.email())
-                .filter(User::isActive)
-                .filter(u -> u.getPassword() != null && passwordEncoder.matches(req.password(), u.getPassword()))
-                .orElseThrow(() -> ApiException.unauthorized("Invalid credentials"));
-        return issue(user);
     }
 
     @Transactional
