@@ -20,6 +20,10 @@ spring:
           uri: ${TASK_SERVICE_URL:http://localhost:3010}
           predicates:
             - Path=/api/tasks/**
+        - id: vocab
+          uri: ${VOCAB_SERVICE_URL:http://localhost:3020}
+          predicates:
+            - Path=/api/decks/**,/api/cards/**,/api/study/**
       default-filters:
         # CORS do gateway lo; tránh header bị lặp khi service cũng trả CORS.
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST

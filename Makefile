@@ -16,9 +16,10 @@ BLUE   := \033[0;34m
 NC     := \033[0m
 
 # Services
-SERVICES     := kruzetech-auth kruzetech-task kruzetech-gateway
+SERVICES     := kruzetech-auth kruzetech-task kruzetech-vocab kruzetech-gateway
 AUTH_PORT    := 3000
 TASK_PORT    := 3010
+VOCAB_PORT   := 3020
 GATEWAY_PORT := 8088
 DB_PORT      := 5433
 REDIS_PORT   := 6379
@@ -179,7 +180,7 @@ status:  ## Show status of all components
 	@$(COMPOSE) ps --format "  {{.Name}}: {{.Status}}" 2>/dev/null | grep . || echo "  (down)"
 	@echo ""
 	@printf "$(YELLOW)Services:$(NC)\n"
-	@for svc_port in "auth:$(AUTH_PORT)" "task:$(TASK_PORT)" "gateway:$(GATEWAY_PORT)"; do \
+	@for svc_port in "auth:$(AUTH_PORT)" "task:$(TASK_PORT)" "vocab:$(VOCAB_PORT)" "gateway:$(GATEWAY_PORT)"; do \
 		svc=$${svc_port%%:*}; \
 		port=$${svc_port##*:}; \
 		health=$$(docker inspect --format='{{.State.Health.Status}}' $$(docker compose ps -q $$svc) 2>/dev/null); \
@@ -194,6 +195,7 @@ status:  ## Show status of all components
 	@echo "  API (gateway)   : http://localhost:$(GATEWAY_PORT)/api"
 	@echo "  Swagger auth    : http://localhost:$(AUTH_PORT)/api/docs"
 	@echo "  Swagger task    : http://localhost:$(TASK_PORT)/api/docs"
+	@echo "  Swagger vocab   : http://localhost:$(VOCAB_PORT)/api/docs"
 	@echo "  Health gateway  : http://localhost:$(GATEWAY_PORT)/actuator/health"
 	@echo ""
 
@@ -209,6 +211,10 @@ logs-auth:  ## Follow kruzetech-auth log
 logs-task:  ## Follow kruzetech-task log
 	@$(COMPOSE) logs -f --tail=100 task
 
+.PHONY: logs-vocab
+logs-vocab:  ## Follow kruzetech-vocab log
+	@$(COMPOSE) logs -f --tail=100 vocab
+
 .PHONY: logs-gateway
 logs-gateway:  ## Follow kruzetech-gateway log
 	@$(COMPOSE) logs -f --tail=100 gateway
@@ -222,7 +228,7 @@ logs-postgres:  ## Follow Postgres log
 # BUILD / TEST
 # ============================================================================
 .PHONY: build
-build:  ## Build jar of all 3 services (./gradlew bootJar)
+build:  ## Build jar of all 4 services (./gradlew bootJar)
 	@for svc in $(SERVICES); do \
 		printf "$(BLUE)-> Building $$svc...$(NC)\n"; \
 		(cd services/$$svc && ./gradlew bootJar -x test) || exit 1; \
@@ -230,7 +236,7 @@ build:  ## Build jar of all 3 services (./gradlew bootJar)
 	@printf "$(GREEN)[ok] Build complete$(NC)\n"
 
 .PHONY: test
-test:  ## Run unit tests of 3 services (H2, no Docker needed)
+test:  ## Run unit tests of 4 services (H2, no Docker needed)
 	@for svc in $(SERVICES); do \
 		printf "$(BLUE)-> Testing $$svc...$(NC)\n"; \
 		(cd services/$$svc && ./gradlew test) || exit 1; \
@@ -248,6 +254,10 @@ psql-auth:  ## Connect to kruzetech_auth DB
 .PHONY: psql-task
 psql-task:  ## Connect to kruzetech_task DB
 	@docker compose exec postgres psql -U kruzetech_task -d kruzetech_task
+
+.PHONY: psql-vocab
+psql-vocab:  ## Connect to kruzetech_vocab DB
+	@docker compose exec postgres psql -U kruzetech_vocab -d kruzetech_vocab
 
 
 # ============================================================================

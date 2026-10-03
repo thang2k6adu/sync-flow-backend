@@ -1,0 +1,42 @@
+server:
+  port: ${PORT:3020}
+  servlet:
+    context-path: /api
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: kruzetech-vocab
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/kruzetech_vocab}
+    username: ${DB_USERNAME:kruzetech_vocab}
+    password: ${DB_PASSWORD:kruzetech_vocab}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+  cors:
+    origins: ${CORS_ORIGIN:*}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    path: /docs
+    enabled: ${SWAGGER_ENABLED:true}

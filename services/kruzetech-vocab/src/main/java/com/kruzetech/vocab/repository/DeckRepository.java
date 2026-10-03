@@ -1,0 +1,15 @@
+package com.kruzetech.vocab.repository;
+
+import com.kruzetech.vocab.entity.Deck;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface DeckRepository extends JpaRepository<Deck, String> {
+
+    List<Deck> findByUserIdOrderByCreatedAtDesc(String userId);
+
+    Optional<Deck> findByIdAndUserId(String id, String userId);
+}

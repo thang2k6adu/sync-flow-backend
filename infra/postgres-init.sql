@@ -4,3 +4,6 @@ CREATE DATABASE kruzetech_auth OWNER kruzetech_auth;
 
 CREATE USER kruzetech_task WITH PASSWORD 'kruzetech_task';
 CREATE DATABASE kruzetech_task OWNER kruzetech_task;
+
+CREATE USER kruzetech_vocab WITH PASSWORD 'kruzetech_vocab';
+CREATE DATABASE kruzetech_vocab OWNER kruzetech_vocab;

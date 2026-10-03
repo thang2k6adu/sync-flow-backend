@@ -1,0 +1,105 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-vocab-init
+      author: kruzetech
+      changes:
+        # 1. Bảng decks
+        - createTable:
+            tableName: decks
+            columns:
+              - column: { name: id, type: varchar(36), constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: name, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: description, type: varchar(500) }
+              - column: { name: created_at, type: timestamp with time zone, constraints: { nullable: false } }
+        - createIndex:
+            tableName: decks
+            indexName: idx_decks_user
+            columns:
+              - column: { name: user_id }
+
+        # 2. Bảng vocab_cards
+        - createTable:
+            tableName: vocab_cards
+            columns:
+              - column: { name: id, type: varchar(36), constraints: { primaryKey: true, nullable: false } }
+              - column: { name: deck_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: term, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: phonetic, type: varchar(100) }
+              - column: { name: audio_url, type: varchar(255) }
+              - column: { name: meanings, type: jsonb, constraints: { nullable: false } }
+              - column: { name: collocations, type: jsonb }
+              - column: { name: created_at, type: timestamp with time zone, constraints: { nullable: false } }
+        - createIndex:
+            tableName: vocab_cards
+            indexName: idx_cards_deck
+            columns:
+              - column: { name: deck_id }
+
+        # 3. Bảng card_exercises
+        - createTable:
+            tableName: card_exercises
+            columns:
+              - column: { name: id, type: varchar(36), constraints: { primaryKey: true, nullable: false } }
+              - column: { name: card_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: exercise_type, type: varchar(50), constraints: { nullable: false } }
+              - column: { name: meaning_hint, type: varchar(255) }
+              - column: { name: target_sentence, type: text, constraints: { nullable: false } }
+              - column: { name: vietnamese_translation, type: text, constraints: { nullable: false } }
+              - column: { name: tokens, type: jsonb, constraints: { nullable: false } }
+              - column: { name: distractor_tokens, type: jsonb }
+              - column: { name: target_index, type: int, constraints: { nullable: false } }
+              - column: { name: audio_url, type: varchar(255) }
+              - column: { name: created_at, type: timestamp with time zone, constraints: { nullable: false } }
+        - createIndex:
+            tableName: card_exercises
+            indexName: idx_exercises_card
+            columns:
+              - column: { name: card_id }
+
+        # 4. Bảng user_card_progress
+        - createTable:
+            tableName: user_card_progress
+            columns:
+              - column: { name: user_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: card_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: state, type: varchar(20), defaultValue: 'new', constraints: { nullable: false } }
+              - column: { name: mastery_level, type: int, defaultValueNumeric: 1, constraints: { nullable: false } }
+              - column: { name: ease_factor, type: numeric(4,2), defaultValueNumeric: 2.50, constraints: { nullable: false } }
+              - column: { name: interval_days, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: repetition_count, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: last_exercise_index, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: due_date, type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: last_reviewed_at, type: timestamp with time zone }
+              - column: { name: lapses_count, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addPrimaryKey:
+            tableName: user_card_progress
+            columnNames: user_id, card_id
+            constraintName: pk_user_card_progress
+        - createIndex:
+            tableName: user_card_progress
+            indexName: idx_progress_due
+            columns:
+              - column: { name: user_id }
+              - column: { name: due_date }
+
+        # 5. Bảng review_logs
+        - createTable:
+            tableName: review_logs
+            columns:
+              - column: { name: id, type: varchar(36), constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: card_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: rating, type: varchar(20), constraints: { nullable: false } }
+              - column: { name: interval_before, type: int, constraints: { nullable: false } }
+              - column: { name: interval_after, type: int, constraints: { nullable: false } }
+              - column: { name: time_spent_ms, type: int, constraints: { nullable: false } }
+              - column: { name: mistakes_count, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: used_hint, type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: reviewed_at, type: timestamp with time zone, constraints: { nullable: false } }
+        - createIndex:
+            tableName: review_logs
+            indexName: idx_review_logs_card_user
+            columns:
+              - column: { name: card_id }
+              - column: { name: user_id }
