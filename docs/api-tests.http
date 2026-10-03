@@ -1,0 +1,229 @@
+### ============================================================================
+### SYNC FLOW - API REST CLIENT TEST SUITE
+### Sử dụng với VS Code (Extension: REST Client) hoặc IntelliJ HTTP Client
+### ============================================================================
+
+@gatewayUrl = http://localhost:8088/api
+@authUrl = http://localhost:3000/api
+@taskUrl = http://localhost:3010/api
+@vocabUrl = http://localhost:3020/api
+
+### ----------------------------------------------------------------------------
+### 1. HEALTH CHECKS
+### ----------------------------------------------------------------------------
+
+### Gateway Health Check
+GET http://localhost:8088/actuator/health
+
+### Auth Service Health Check
+GET {{gatewayUrl}}/health
+# hoặc gọi trực tiếp: GET {{authUrl}}/health
+
+### Task Service Health Check
+GET {{taskUrl}}/health
+
+### Vocab Service Health Check
+GET {{vocabUrl}}/health
+
+
+### ----------------------------------------------------------------------------
+### 2. AUTH SERVICE (Đăng ký, Đăng nhập, Profile, Refresh Token)
+### ----------------------------------------------------------------------------
+
+### 2.1 Đăng ký tài khoản mới (Alice)
+# @name registerAlice
+POST {{gatewayUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "alice@syncflow.com",
+  "password": "Password123!",
+  "firstName": "Alice",
+  "lastName": "Nguyen"
+}
+
+### Lưu token từ response của register
+@accessToken = {{registerAlice.response.body.data.tokens.accessToken}}
+@refreshToken = {{registerAlice.response.body.data.tokens.refreshToken}}
+
+### 2.2 Đăng ký tài khoản thứ 2 (Bob)
+# @name registerBob
+POST {{gatewayUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "bob@syncflow.com",
+  "password": "Password123!",
+  "firstName": "Bob",
+  "lastName": "Tran"
+}
+
+@bobToken = {{registerBob.response.body.data.tokens.accessToken}}
+
+### 2.3 Xem thông tin cá nhân (Profile)
+GET {{gatewayUrl}}/users/profile
+Authorization: Bearer {{accessToken}}
+
+### 2.4 Cập nhật Profile
+PATCH {{gatewayUrl}}/users/profile
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Alice Super"
+}
+
+### 2.5 Refresh Access Token
+# @name refreshTokenCall
+POST {{gatewayUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 2.6 Đăng xuất (Thu hồi refresh token)
+POST {{gatewayUrl}}/auth/logout
+Authorization: Bearer {{accessToken}}
+
+
+### ----------------------------------------------------------------------------
+### 3. TASK SERVICE (CRUD Công việc phân quyền theo User)
+### ----------------------------------------------------------------------------
+
+### 3.1 Tạo Task mới (Alice)
+# @name createTask
+POST {{gatewayUrl}}/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Thiết lập hệ thống CI/CD cho Backend",
+  "description": "Tích hợp GitHub Actions, build GHCR image và deploy tự động",
+  "status": "IN_PROGRESS"
+}
+
+@taskId = {{createTask.response.body.data.id}}
+
+### 3.2 Lấy danh sách Task của Alice
+GET {{gatewayUrl}}/tasks?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+### 3.3 Lọc Task theo trạng thái và tìm kiếm
+GET {{gatewayUrl}}/tasks?status=IN_PROGRESS&search=CI/CD
+Authorization: Bearer {{accessToken}}
+
+### 3.4 Xem chi tiết Task
+GET {{gatewayUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+
+### 3.5 Cập nhật Task
+PATCH {{gatewayUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "DONE"
+}
+
+### 3.6 Bob thử truy cập Task của Alice (Kỳ vọng: 404 Not Found)
+GET {{gatewayUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{bobToken}}
+
+### 3.7 Xóa Task
+DELETE {{gatewayUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+
+
+### ----------------------------------------------------------------------------
+### 4. VOCAB SERVICE (Bộ thẻ từ vựng & Ôn tập SRS)
+### ----------------------------------------------------------------------------
+
+### 4.1 Tạo bộ từ vựng mới (Deck)
+# @name createDeck
+POST {{gatewayUrl}}/decks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "IELTS Academic Core Vocabulary",
+  "description": "3000 từ vựng cốt lõi học thuật Band 7.0+"
+}
+
+@deckId = {{createDeck.response.body.data.id}}
+
+### 4.2 Lấy danh sách Decks của Alice
+GET {{gatewayUrl}}/decks
+Authorization: Bearer {{accessToken}}
+
+### 4.3 Xem chi tiết Deck
+GET {{gatewayUrl}}/decks/{{deckId}}
+Authorization: Bearer {{accessToken}}
+
+### 4.4 Thêm thẻ từ vựng mới (Card) kèm nghĩa & bài tập
+# @name createCard
+POST {{gatewayUrl}}/cards
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "deckId": "{{deckId}}",
+  "term": "ubiquitous",
+  "phonetic": "/juːˈbɪk.wə.təs/",
+  "meanings": [
+    {
+      "order": 1,
+      "pos": "adjective",
+      "definition_en": "present, appearing, or found everywhere",
+      "meaning_vi": "có mặt ở khắp mọi nơi, phổ biến"
+    }
+  ],
+  "collocations": [
+    "ubiquitous presence",
+    "become ubiquitous"
+  ],
+  "exercises": [
+    {
+      "exerciseType": "FILL_BLANK",
+      "targetSentence": "Smartphones have become ubiquitous in daily life.",
+      "vietnameseTranslation": "Điện thoại thông minh đã trở nên phổ biến ở khắp nơi trong đời sống hàng ngày.",
+      "tokens": ["Smartphones", "have", "become", "ubiquitous", "in", "daily", "life."],
+      "targetIndex": 3
+    }
+  ]
+}
+
+@cardId = {{createCard.response.body.data.id}}
+
+### 4.5 Lấy danh sách Cards trong Deck
+GET {{gatewayUrl}}/cards?deckId={{deckId}}
+Authorization: Bearer {{accessToken}}
+
+### 4.6 Xem chi tiết thẻ Card
+GET {{gatewayUrl}}/cards/{{cardId}}
+Authorization: Bearer {{accessToken}}
+
+### 4.7 Lấy hàng đợi ôn tập SRS (Study Queue)
+GET {{gatewayUrl}}/study/queue?deckId={{deckId}}&limit=10
+Authorization: Bearer {{accessToken}}
+
+### 4.8 Gửi kết quả ôn tập thẻ (Telemetry & SRS evaluation)
+POST {{gatewayUrl}}/study/submit
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "cardId": "{{cardId}}",
+  "rating": "GOOD",
+  "timeSpentMs": 4200,
+  "mistakesCount": 0,
+  "usedHint": false
+}
+
+### 4.9 Bob thử truy cập Deck của Alice (Kỳ vọng: 404 Not Found)
+GET {{gatewayUrl}}/decks/{{deckId}}
+Authorization: Bearer {{bobToken}}
+
+### 4.10 Xóa Deck
+DELETE {{gatewayUrl}}/decks/{{deckId}}
+Authorization: Bearer {{accessToken}}

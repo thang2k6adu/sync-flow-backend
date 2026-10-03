@@ -65,7 +65,7 @@ databaseChangeLog:
               - column: { name: card_id, type: varchar(36), constraints: { nullable: false } }
               - column: { name: state, type: varchar(20), defaultValue: 'new', constraints: { nullable: false } }
               - column: { name: mastery_level, type: int, defaultValueNumeric: 1, constraints: { nullable: false } }
-              - column: { name: ease_factor, type: numeric(4,2), defaultValueNumeric: 2.50, constraints: { nullable: false } }
+              - column: { name: ease_factor, type: "numeric(4,2)", defaultValueNumeric: 2.50, constraints: { nullable: false } }
               - column: { name: interval_days, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
               - column: { name: repetition_count, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
               - column: { name: last_exercise_index, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }

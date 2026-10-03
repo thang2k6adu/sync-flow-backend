@@ -1,0 +1,132 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend-net
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend-net
+
+  auth:
+    image: ghcr.io/${IMAGE_REPO:-thang2k6adu/sync-flow-backend}/kruzetech-auth:${IMAGE_TAG:-latest}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PORT: "3000"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_auth
+      REDIS_HOST: redis
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - backend-net
+
+  task:
+    image: ghcr.io/${IMAGE_REPO:-thang2k6adu/sync-flow-backend}/kruzetech-task:${IMAGE_TAG:-latest}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PORT: "3010"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_task
+    ports:
+      - "3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - backend-net
+
+  vocab:
+    image: ghcr.io/${IMAGE_REPO:-thang2k6adu/sync-flow-backend}/kruzetech-vocab:${IMAGE_TAG:-latest}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PORT: "3020"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_vocab
+    ports:
+      - "3020:3020"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - backend-net
+
+  gateway:
+    image: ghcr.io/${IMAGE_REPO:-thang2k6adu/sync-flow-backend}/kruzetech-gateway:${IMAGE_TAG:-latest}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      AUTH_SERVICE_URL: http://auth:3000
+      TASK_SERVICE_URL: http://task:3010
+      VOCAB_SERVICE_URL: http://vocab:3020
+    ports:
+      - "${GATEWAY_PORT:-8088}:8080"
+    depends_on:
+      - auth
+      - task
+      - vocab
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - backend-net
+
+volumes:
+  pgdata:
+
+networks:
+  backend-net:
+    driver: bridge
