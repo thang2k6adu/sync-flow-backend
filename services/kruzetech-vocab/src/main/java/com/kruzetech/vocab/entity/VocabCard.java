@@ -41,6 +41,15 @@ public class VocabCard {
     @Column(name = "audio_url", length = 255)
     private String audioUrl;
 
+    @Column(name = "cefr_level", length = 10)
+    private String cefrLevel;
+
+    @Column(name = "frequency_rank")
+    private Integer frequencyRank;
+
+    @Column(name = "word_family_id", length = 36)
+    private String wordFamilyId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "meanings", columnDefinition = "jsonb", nullable = false)
     private List<Meaning> meanings;

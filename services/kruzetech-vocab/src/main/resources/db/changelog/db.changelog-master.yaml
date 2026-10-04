@@ -1,3 +1,7 @@
 databaseChangeLog:
   - include:
       file: db/changelog/001-init-vocab.yaml
+  - include:
+      file: db/changelog/002-add-vocab-classification.yaml
+  - include:
+      file: db/changelog/003-seed-system-vocabulary.yaml

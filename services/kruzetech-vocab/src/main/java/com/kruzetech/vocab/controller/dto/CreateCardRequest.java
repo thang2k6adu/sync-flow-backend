@@ -11,6 +11,10 @@ public record CreateCardRequest(
         @NotBlank String term,
         String phonetic,
         String audioUrl,
+        String cefrLevel,
+        Integer frequencyRank,
+        String wordFamilyId,
+        List<String> tagIds,
         @NotEmpty List<@Valid Meaning> meanings,
         List<String> collocations,
         List<@Valid CreateExerciseRequest> exercises) {}

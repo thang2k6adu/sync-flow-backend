@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-seed-system-vocabulary
+      author: kruzetech
+      changes:
+        - sqlFile:
+            path: db/changelog/003-seed-system-vocabulary.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true

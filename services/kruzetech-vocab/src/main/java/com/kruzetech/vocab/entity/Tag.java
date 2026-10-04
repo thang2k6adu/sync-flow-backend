@@ -14,35 +14,26 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "decks")
+@Table(name = "tags")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Deck {
+public class Tag {
 
     @Id
     @Column(length = 36)
     private String id;
 
-    @Column(name = "user_id", nullable = false, length = 36)
+    @Column(name = "user_id", length = 36)
     private String userId;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(length = 500)
-    private String description;
-
-    @Column(length = 50)
-    private String category;
-
-    @Column(name = "icon_url", length = 255)
-    private String iconUrl;
-
-    @Column(name = "cefr_level", length = 10)
-    private String cefrLevel;
+    @Column(length = 20)
+    private String color;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

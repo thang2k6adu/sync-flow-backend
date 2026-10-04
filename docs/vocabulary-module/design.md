@@ -5,9 +5,36 @@
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 erDiagram
+    DECKS ||--o{ VOCAB_CARDS : "contains"
     VOCAB_CARDS ||--o{ CARD_EXERCISES : "has many"
     VOCAB_CARDS ||--o{ USER_CARD_PROGRESS : "tracked by"
     USER_CARD_PROGRESS ||--o{ REVIEW_LOGS : "generates"
+    VOCAB_CARDS ||--o{ CARD_TAGS : "tagged with"
+    TAGS ||--o{ CARD_TAGS : "applied to"
+
+    DECKS {
+        string id PK "Khóa chính UUID định danh bộ thẻ"
+        string user_id "ID người sở hữu bộ thẻ"
+        string name "Tên bộ thẻ/chủ đề (vd: Travel, IELTS 7.0)"
+        string description "Mô tả mục tiêu của bộ thẻ"
+        string category "Phân nhóm: topic, exam, grammar, custom"
+        string icon_url "URL icon hoặc hình ảnh minh họa chủ đề"
+        string cefr_level "Cấp độ mục tiêu: A1, A2, B1, B2, C1, C2"
+        timestamp created_at "Thời điểm tạo bộ thẻ"
+    }
+
+    TAGS {
+        string id PK "Khóa chính UUID định danh nhãn"
+        string user_id "ID người tạo (NULL nếu là nhãn hệ thống)"
+        string name "Tên nhãn (vd: interview, collocation, slang)"
+        string color "Mã màu hiển thị tag (vd: #3B82F6)"
+        timestamp created_at "Thời điểm tạo nhãn"
+    }
+
+    CARD_TAGS {
+        string card_id PK, FK "Khóa ngoại trỏ đến VOCAB_CARDS(id)"
+        string tag_id PK, FK "Khóa ngoại trỏ đến TAGS(id)"
+    }
 
     VOCAB_CARDS {
         string id PK "Khóa chính UUID định danh thẻ từ vựng"
@@ -15,6 +42,9 @@ erDiagram
         string term "Từ vựng tiếng Anh (vd: run, bank)"
         string phonetic "Phiên âm quốc tế IPA (vd: /rʌn/)"
         string audio_url "URL file phát âm chuẩn của từ"
+        string cefr_level "Cấp độ chuẩn CEFR của từ (A1 -> C2)"
+        int frequency_rank "Thứ hạng tần suất sử dụng (vd: Top 3000)"
+        string word_family_id "ID gom nhóm họ từ cùng gốc"
         jsonb meanings "Danh sách nghĩa tiếng Việt, từ loại & ví dụ"
         jsonb collocations "Cụm từ cố định hay đi kèm"
         timestamp created_at "Thời điểm tạo thẻ"
@@ -63,17 +93,47 @@ erDiagram
 
 ### 1.1. Từ Điển Dữ Liệu Chi Tiết (Data Dictionary)
 
+#### Bảng `DECKS` (Bộ thẻ / Chủ đề học tập)
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Mục Đích Sử Dụng |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | PK | Khóa chính UUID định danh duy nhất cho bộ thẻ. |
+| `user_id` | `VARCHAR(36)` | NOT NULL | ID người tạo bộ thẻ (hỗ trợ bộ thẻ cá nhân hoặc giáo trình mẫu). |
+| `name` | `VARCHAR(100)` | NOT NULL | Tên bộ thẻ (ví dụ: `"Du Lịch & Khám Phá"`, `"IELTS Speaking 7.0"`). |
+| `description` | `VARCHAR(500)` | NULL | Mô tả chi tiết về mục tiêu hoặc đối tượng học của bộ thẻ. |
+| `category` | `VARCHAR(50)` | NULL | Phân nhóm lớn: `topic` (chủ đề), `exam` (chứng chỉ), `grammar` (cụm từ/ngữ pháp), `custom`. |
+| `icon_url` | `VARCHAR(255)` | NULL | URL ảnh icon hoặc ảnh bìa đại diện cho chủ đề. |
+| `cefr_level` | `VARCHAR(10)` | NULL | Khung trình độ mục tiêu của bộ thẻ (`A1`, `A2`, `B1`, `B2`, `C1`, `C2`). |
+| `created_at` | `TIMESTAMPTZ` | DEFAULT NOW() | Thời điểm tạo bộ thẻ. |
+
 #### Bảng `VOCAB_CARDS` (Thẻ từ vựng)
 | Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Mục Đích Sử Dụng |
 | :--- | :--- | :--- | :--- |
 | `id` | `VARCHAR(36)` | PK | Khóa chính UUID định danh duy nhất cho mỗi thẻ từ vựng. |
-| `deck_id` | `VARCHAR(36)` | FK | Khóa ngoại trỏ đến bộ thẻ (`DECKS`), giúp phân loại theo chủ đề/giáo trình. |
+| `deck_id` | `VARCHAR(36)` | FK | Khóa ngoại trỏ đến bộ thẻ (`DECKS`), nhóm thẻ theo chủ đề/giáo trình chính. |
 | `term` | `VARCHAR(100)` | NOT NULL | Từ vựng hoặc cụm từ tiếng Anh gốc (ví dụ: `"run"`, `"take off"`). |
 | `phonetic` | `VARCHAR(100)` | NULL | Ký hiệu phiên âm quốc tế IPA chuẩn (ví dụ: `"/rʌn/"`). |
 | `audio_url` | `VARCHAR(255)` | NULL | Đường dẫn URL file âm thanh phát âm chuẩn bản ngữ của từ. |
+| `cefr_level` | `VARCHAR(10)` | NULL | Cấp độ độ khó chuẩn CEFR của từ vựng (`A1`, `A2`, `B1`, `B2`, `C1`, `C2`). |
+| `frequency_rank` | `INT` | NULL | Thứ hạng tần suất xuất hiện theo từ điển chuẩn (Oxford 3000/5000, COCA). |
+| `word_family_id` | `VARCHAR(36)` | NULL | Mã UUID liên kết các từ thuộc cùng một họ từ (Word Family: act, active, action...). |
 | `meanings` | `JSONB` | NOT NULL | Mảng JSON lưu trữ danh sách các nghĩa tiếng Việt (được đánh số), từ loại tương ứng, định nghĩa tiếng Anh và câu ví dụ minh họa từng nghĩa. |
 | `collocations` | `JSONB` | NULL | Mảng các cụm từ kết hợp tự nhiên (collocations) thường gặp đi kèm với từ vựng. |
 | `created_at` | `TIMESTAMPTZ` | DEFAULT NOW() | Thời điểm thẻ từ vựng được khởi tạo trong cơ sở dữ liệu. |
+
+#### Bảng `TAGS` (Nhãn phân loại linh hoạt)
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Mục Đích Sử Dụng |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | PK | Khóa chính UUID định danh duy nhất cho nhãn. |
+| `user_id` | `VARCHAR(36)` | NULL | ID người tạo nhãn (NULL đại diện cho nhãn dùng chung của hệ thống). |
+| `name` | `VARCHAR(50)` | NOT NULL | Tên nhãn (ví dụ: `"interview"`, `"academic"`, `"phrasal_verb"`, `"slang"`). |
+| `color` | `VARCHAR(20)` | NULL | Mã màu hiển thị giao diện của nhãn (ví dụ: `"#2563EB"`). |
+| `created_at` | `TIMESTAMPTZ` | DEFAULT NOW() | Thời điểm tạo nhãn. |
+
+#### Bảng `CARD_TAGS` (Liên kết nhiều - nhiều Thẻ & Nhãn)
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Mục Đích Sử Dụng |
+| :--- | :--- | :--- | :--- |
+| `card_id` | `VARCHAR(36)` | PK, FK | Khóa ngoại tham chiếu `VOCAB_CARDS(id)`. |
+| `tag_id` | `VARCHAR(36)` | PK, FK | Khóa ngoại tham chiếu `TAGS(id)`. |
 
 #### Bảng `CARD_EXERCISES` (Bài tập câu luyện tập)
 | Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa / Mục Đích Sử Dụng |
@@ -117,6 +177,32 @@ erDiagram
 | `mistakes_count` | `INT` | DEFAULT 0 | Số lần người học chọn sai vị trí/ghép sai từ trong bài tập câu. |
 | `used_hint` | `BOOLEAN` | DEFAULT FALSE | Cờ ghi nhận người học có nhấn nút xem gợi ý ngữ cảnh/nghĩa hay không. |
 | `reviewed_at` | `TIMESTAMPTZ` | DEFAULT NOW() | Thời điểm ghi nhận lượt ôn tập thành công. |
+
+### 1.2. Chiến Lược Phân Loại Từ Vựng Đa Chiều (Multi-Dimensional Classification)
+
+Thay vì chỉ bó hẹp từ vựng vào một chủ đề đơn lẻ (dẫn đến việc một từ có nhiều ngữ cảnh bị gán gượng ép), kiến trúc cơ sở dữ liệu hỗ trợ **4 trục phân loại toàn diện**:
+
+```
+                       ┌───────────────────────────────┐
+                       │      VOCAB_CARDS (Từ vựng)     │
+                       └──────────────┬────────────────┘
+         ┌──────────────────┬─────────┴─────────┬──────────────────┐
+         ▼                  ▼                   ▼                  ▼
+   [Trục Chủ Đề]      [Trục Cấp Độ]       [Trục Ngữ Cảnh]     [Trục Họ Từ]
+    DECKS (1-N)        CEFR & Rank          TAGS (N-N)        word_family_id
+  • Topic: Food, Tech • CEFR: A1 -> C2    • #collocation      • Gốc từ & Biến thể:
+  • Exam: IELTS, TOEIC• Top 1000/3000     • #interview, #work   act, active, action,
+  • Grammar/Functions • Độ phổ biến COCA  • #confusing_words    activate, reactor...
+```
+
+1. **Trục Chủ đề & Giáo trình (`DECKS` - Quan hệ 1-N)**:
+   - Gom các thẻ vào các bộ bài tập trung: Chủ đề cuộc sống (`topic`), Chứng chỉ ôn luyện (`exam`), hoặc Khung ngữ pháp chuyên đề (`grammar`).
+2. **Trục Cấp độ & Độ phổ biến (`cefr_level` & `frequency_rank` - Trực tiếp trên Card)**:
+   - Giúp hệ thống sắp xếp thứ tự ưu tiên học từ quan trọng trước, từ hiếm gặp sau.
+3. **Trục Ngữ cảnh & Tính năng động (`TAGS` qua `CARD_TAGS` - Quan hệ N-N)**:
+   - Một từ có thể gắn nhiều nhãn tình huống (ví dụ từ *negotiate* vừa mang nhãn `#business_meeting`, vừa có `#ielts_writing_task2`, vừa có `#formal`).
+4. **Trục Họ từ (`word_family_id`)**:
+   - Cho phép người học mở rộng vốn từ theo sơ đồ mạng nhện ngữ nghĩa, học 1 từ biết thêm các dạng danh/tính/động/trạng của từ đó.
 
 ---
 

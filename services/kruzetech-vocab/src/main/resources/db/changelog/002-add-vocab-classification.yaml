@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-vocab-classification
+      author: kruzetech
+      changes:
+        # 1. Bổ sung các cột phân loại vào bảng decks
+        - addColumn:
+            tableName: decks
+            columns:
+              - column: { name: category, type: varchar(50) }
+              - column: { name: icon_url, type: varchar(255) }
+              - column: { name: cefr_level, type: varchar(10) }
+
+        # 2. Bổ sung các cột phân loại vào bảng vocab_cards
+        - addColumn:
+            tableName: vocab_cards
+            columns:
+              - column: { name: cefr_level, type: varchar(10) }
+              - column: { name: frequency_rank, type: int }
+              - column: { name: word_family_id, type: varchar(36) }
+        - createIndex:
+            tableName: vocab_cards
+            indexName: idx_cards_cefr
+            columns:
+              - column: { name: cefr_level }
+        - createIndex:
+            tableName: vocab_cards
+            indexName: idx_cards_family
+            columns:
+              - column: { name: word_family_id }
+
+        # 3. Bảng tags (Hệ thống nhãn phân loại linh hoạt)
+        - createTable:
+            tableName: tags
+            columns:
+              - column: { name: id, type: varchar(36), constraints: { primaryKey: true, nullable: false } }
+              - column: { name: user_id, type: varchar(36) }
+              - column: { name: name, type: varchar(50), constraints: { nullable: false } }
+              - column: { name: color, type: varchar(20) }
+              - column: { name: created_at, type: timestamp with time zone, constraints: { nullable: false } }
+        - createIndex:
+            tableName: tags
+            indexName: idx_tags_user_name
+            columns:
+              - column: { name: user_id }
+              - column: { name: name }
+
+        # 4. Bảng card_tags (Quan hệ nhiều - nhiều giữa thẻ từ vựng và nhãn)
+        - createTable:
+            tableName: card_tags
+            columns:
+              - column: { name: card_id, type: varchar(36), constraints: { nullable: false } }
+              - column: { name: tag_id, type: varchar(36), constraints: { nullable: false } }
+        - addPrimaryKey:
+            tableName: card_tags
+            columnNames: card_id, tag_id
+            constraintName: pk_card_tags
+        - createIndex:
+            tableName: card_tags
+            indexName: idx_card_tags_card
+            columns:
+              - column: { name: card_id }
+        - createIndex:
+            tableName: card_tags
+            indexName: idx_card_tags_tag
+            columns:
+              - column: { name: tag_id }

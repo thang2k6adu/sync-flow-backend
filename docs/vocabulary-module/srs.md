@@ -173,6 +173,8 @@ Lấy danh sách các thẻ tới hạn ôn tập kèm payload bài tập tươn
 * **Request Query Params**:
   - `limit`: Số lượng thẻ tối đa (mặc định 20, max 50).
   - `deck_id`: (Optional) Lọc theo bộ thẻ cụ thể.
+  - `cefr_level`: (Optional) Lọc theo cấp độ CEFR cụ thể (ví dụ: `B1`, `B2`).
+  - `tag_id`: (Optional) Lọc theo nhãn cụ thể (ví dụ: `#collocation`, `#interview`).
 
 * **Response (200 OK)**:
 ```json

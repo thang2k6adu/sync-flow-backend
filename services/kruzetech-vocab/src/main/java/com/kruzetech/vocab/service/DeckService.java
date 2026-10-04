@@ -22,6 +22,9 @@ public class DeckService {
                 .userId(userId)
                 .name(request.name())
                 .description(request.description())
+                .category(request.category())
+                .iconUrl(request.iconUrl())
+                .cefrLevel(request.cefrLevel())
                 .build();
         Deck saved = deckRepository.save(deck);
         return toDto(saved);
@@ -49,6 +52,14 @@ public class DeckService {
     }
 
     private DeckDto toDto(Deck deck) {
-        return new DeckDto(deck.getId(), deck.getUserId(), deck.getName(), deck.getDescription(), deck.getCreatedAt());
+        return new DeckDto(
+                deck.getId(),
+                deck.getUserId(),
+                deck.getName(),
+                deck.getDescription(),
+                deck.getCategory(),
+                deck.getIconUrl(),
+                deck.getCefrLevel(),
+                deck.getCreatedAt());
     }
 }

@@ -7,4 +7,7 @@ public record DeckDto(
         String userId,
         String name,
         String description,
+        String category,
+        String iconUrl,
+        String cefrLevel,
         Instant createdAt) {}

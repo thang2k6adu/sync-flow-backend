@@ -6,11 +6,13 @@ import com.kruzetech.vocab.controller.dto.CreateCardRequest;
 import com.kruzetech.vocab.controller.dto.CreateExerciseRequest;
 import com.kruzetech.vocab.core.exception.ApiException;
 import com.kruzetech.vocab.entity.CardExercise;
+import com.kruzetech.vocab.entity.CardTag;
 import com.kruzetech.vocab.entity.Deck;
 import com.kruzetech.vocab.entity.UserCardProgress;
 import com.kruzetech.vocab.entity.UserCardProgressId;
 import com.kruzetech.vocab.entity.VocabCard;
 import com.kruzetech.vocab.repository.CardExerciseRepository;
+import com.kruzetech.vocab.repository.CardTagRepository;
 import com.kruzetech.vocab.repository.DeckRepository;
 import com.kruzetech.vocab.repository.UserCardProgressRepository;
 import com.kruzetech.vocab.repository.VocabCardRepository;
@@ -30,6 +32,7 @@ public class CardService {
     private final CardExerciseRepository exerciseRepository;
     private final DeckRepository deckRepository;
     private final UserCardProgressRepository progressRepository;
+    private final CardTagRepository cardTagRepository;
 
     @Transactional
     public CardDto createCard(String userId, CreateCardRequest request) {
@@ -41,10 +44,21 @@ public class CardService {
                 .term(request.term().trim())
                 .phonetic(request.phonetic())
                 .audioUrl(request.audioUrl())
+                .cefrLevel(request.cefrLevel())
+                .frequencyRank(request.frequencyRank())
+                .wordFamilyId(request.wordFamilyId())
                 .meanings(request.meanings())
                 .collocations(request.collocations() != null ? request.collocations() : List.of())
                 .build();
         VocabCard savedCard = cardRepository.save(card);
+
+        List<String> tagIds = new ArrayList<>();
+        if (request.tagIds() != null && !request.tagIds().isEmpty()) {
+            for (String tagId : request.tagIds()) {
+                cardTagRepository.save(new CardTag(savedCard.getId(), tagId));
+                tagIds.add(tagId);
+            }
+        }
 
         List<CardExercise> savedExercises = new ArrayList<>();
         if (request.exercises() != null && !request.exercises().isEmpty()) {
@@ -78,7 +92,7 @@ public class CardService {
                 .build();
         progressRepository.save(initialProgress);
 
-        return toCardDto(savedCard, savedExercises);
+        return toCardDto(savedCard, savedExercises, tagIds);
     }
 
     @Transactional(readOnly = true)
@@ -89,12 +103,17 @@ public class CardService {
         List<VocabCard> cards = cardRepository.findByDeckIdOrderByCreatedAtAsc(deckId);
         List<String> cardIds = cards.stream().map(VocabCard::getId).toList();
         List<CardExercise> allExercises = exerciseRepository.findByCardIdIn(cardIds);
+        List<CardTag> allTags = cardTagRepository.findByCardIdIn(cardIds);
 
         return cards.stream().map(c -> {
             List<CardExercise> cardExercises = allExercises.stream()
                     .filter(e -> e.getCardId().equals(c.getId()))
                     .toList();
-            return toCardDto(c, cardExercises);
+            List<String> tags = allTags.stream()
+                    .filter(t -> t.getCardId().equals(c.getId()))
+                    .map(CardTag::getTagId)
+                    .toList();
+            return toCardDto(c, cardExercises, tags);
         }).toList();
     }
 
@@ -103,10 +122,13 @@ public class CardService {
         VocabCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> ApiException.notFound("Card not found: " + cardId));
         List<CardExercise> exercises = exerciseRepository.findByCardIdOrderByTargetIndexAsc(cardId);
-        return toCardDto(card, exercises);
+        List<String> tags = cardTagRepository.findByCardId(cardId).stream()
+                .map(CardTag::getTagId)
+                .toList();
+        return toCardDto(card, exercises, tags);
     }
 
-    private CardDto toCardDto(VocabCard card, List<CardExercise> exercises) {
+    private CardDto toCardDto(VocabCard card, List<CardExercise> exercises, List<String> tagIds) {
         List<CardExerciseDto> exerciseDtos = exercises.stream()
                 .map(this::toExerciseDto)
                 .toList();
@@ -117,6 +139,10 @@ public class CardService {
                 card.getTerm(),
                 card.getPhonetic(),
                 card.getAudioUrl(),
+                card.getCefrLevel(),
+                card.getFrequencyRank(),
+                card.getWordFamilyId(),
+                tagIds,
                 card.getMeanings(),
                 card.getCollocations(),
                 exerciseDtos);
