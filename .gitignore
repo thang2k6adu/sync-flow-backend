@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+docker-compose.local.yml
+docker-compose.override.yml
 
 # Gradle
 .gradle/
