@@ -24,17 +24,63 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            kruzetech-auth:
+              - 'services/kruzetech-auth/**'
+              - 'ci/**'
+              - 'infra/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+            kruzetech-task:
+              - 'services/kruzetech-task/**'
+              - 'ci/**'
+              - 'infra/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+            kruzetech-vocab:
+              - 'services/kruzetech-vocab/**'
+              - 'ci/**'
+              - 'infra/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+            kruzetech-gateway:
+              - 'services/kruzetech-gateway/**'
+              - 'ci/**'
+              - 'infra/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+
+      - name: Determine Target Services
+        id: set-services
+        run: |
+          CHANGES='${{ steps.filter.outputs.changes }}'
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$CHANGES" ] || [ "$CHANGES" = "[]" ]; then
+            echo 'services=["kruzetech-auth","kruzetech-task","kruzetech-vocab","kruzetech-gateway"]' >> $GITHUB_OUTPUT
+          else
+            echo "services=$CHANGES" >> $GITHUB_OUTPUT
+          fi
+
   test-and-build:
     name: Test & Build (${{ matrix.service }})
+    needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - kruzetech-auth
-          - kruzetech-task
-          - kruzetech-vocab
-          - kruzetech-gateway
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
 
     steps:
       - name: Checkout Code
@@ -65,15 +111,33 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image (Dry Run & Lint Check)
+      - name: Build Docker Image (Check & Cache)
         uses: docker/build-push-action@v6
         with:
           context: services/${{ matrix.service }}
           file: services/${{ matrix.service }}/Dockerfile
           push: false
-          tags: ${{ matrix.service }}:test
+          load: true
+          tags: ${{ matrix.service }}:ci-test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Push Docker Image (Registry Gate)
+        run: |
+          echo "==> Docker Image for ${{ matrix.service }} built successfully!"
+          IMAGE_TAG="sha-${GITHUB_SHA::7}"
+          IMAGE_REF="ghcr.io/${{ github.repository }}/${{ matrix.service }}:${IMAGE_TAG}"
+          
+          docker tag "${{ matrix.service }}:ci-test" "$IMAGE_REF"
+          
+          if [ -z "${{ secrets.REGISTRY_TOKEN }}" ]; then
+            echo "::error title=Push Gate::[EXPECTED IN CI] Authentication token (REGISTRY_TOKEN) not set. CI verified: Tests PASS, Jar PASS, Docker Build PASS. Pipeline intentionally stops at push gate."
+            exit 1
+          fi
+
+          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE_REF"
+          echo "Successfully pushed: $IMAGE_REF"
 
       - name: Upload Test Report Artifact (on failure)
         uses: actions/upload-artifact@v4

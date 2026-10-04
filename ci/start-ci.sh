@@ -80,11 +80,11 @@ for SVC in "${SERVICES[@]}"; do
   # 5. Build Docker Image (Luôn build để đảm bảo Dockerfile hợp lệ)
   step "build-image" bash "$DIR/build-image.sh" "$SVC_DIR" "$SVC"
 
-  # 6. Publish Docker Image (Chỉ publish khi có thông tin đăng nhập registry)
-  if [[ -n "${IMAGE_REGISTRY:-}" && -n "${REGISTRY_USER:-}" && -n "${REGISTRY_TOKEN:-}" ]]; then
+  # 6. Publish Docker Image
+  if [[ -n "${IMAGE_REGISTRY:-}" ]]; then
     step "publish-image" bash "$DIR/publish-image.sh" "$SVC_DIR" "$SVC"
   else
-    skip "publish-image" "IMAGE_REGISTRY, REGISTRY_USER hoặc REGISTRY_TOKEN chưa cấu hình"
+    skip "publish-image" "IMAGE_REGISTRY chưa đặt (đặt IMAGE_REGISTRY=ghcr.io/test để kiểm thử bước push gate)"
   fi
 
   echo
