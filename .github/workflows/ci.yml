@@ -6,14 +6,16 @@ on:
     paths:
       - 'services/**'
       - 'infra/**'
-      - 'docker-compose.yml'
+      - 'ci/**'
+      - 'docker-compose*.yml'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [ main, master, dev ]
     paths:
       - 'services/**'
       - 'infra/**'
-      - 'docker-compose.yml'
+      - 'ci/**'
+      - 'docker-compose*.yml'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
@@ -59,6 +61,19 @@ jobs:
       - name: Build Executable JAR
         working-directory: services/${{ matrix.service }}
         run: ./gradlew bootJar -x test --no-daemon
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image (Dry Run & Lint Check)
+        uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service }}
+          file: services/${{ matrix.service }}/Dockerfile
+          push: false
+          tags: ${{ matrix.service }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Upload Test Report Artifact (on failure)
         uses: actions/upload-artifact@v4

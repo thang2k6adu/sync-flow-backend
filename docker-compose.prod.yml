@@ -45,8 +45,8 @@ services:
       PORT: "3000"
       DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_auth
       REDIS_HOST: redis
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,8 +66,8 @@ services:
     environment:
       PORT: "3010"
       DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_task
-    ports:
-      - "3010:3010"
+    expose:
+      - "3010"
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,8 +87,8 @@ services:
     environment:
       PORT: "3020"
       DATABASE_URL: jdbc:postgresql://postgres:5432/kruzetech_vocab
-    ports:
-      - "3020:3020"
+    expose:
+      - "3020"
     depends_on:
       postgres:
         condition: service_healthy

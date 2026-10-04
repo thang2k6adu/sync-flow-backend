@@ -1,6 +1,6 @@
 # Hướng dẫn Vận hành & Cấu hình CI/CD Backend Sync Flow
 
-Hệ thống CI/CD của Sync Flow Backend được xây dựng hoàn toàn tự động bằng **GitHub Actions**, **GitHub Container Registry (GHCR)** và **Docker Compose**.
+Hệ thống CI/CD của Sync Flow Backend được xây dựng hoàn toàn tự động bằng **GitHub Actions**, **GitHub Container Registry (GHCR)**, bộ script **Local CI (`backend/ci/`)** và **Docker Compose**.
 
 ---
 
@@ -13,6 +13,7 @@ Hệ thống CI/CD của Sync Flow Backend được xây dựng hoàn toàn tự
        │      ├─ Matrix Test 4 Services song song (Auth, Task, Vocab, Gateway)
        │      ├─ Tự động cache Gradle (tối ưu tốc độ chạy < 1 phút)
        │      ├─ Compile Jar (`./gradlew bootJar -x test`)
+       │      ├─ Build Docker Image Check (kiểm tra cú pháp & tính hợp lệ của Dockerfile)
        │      └─ Tự động xuất Test Report Artifact nếu có lỗi
        │
        └──► CD Pipeline (.github/workflows/cd.yml) (Chạy khi push vào nhánh `main` hoặc tạo Tag)
@@ -23,7 +24,42 @@ Hệ thống CI/CD của Sync Flow Backend được xây dựng hoàn toàn tự
 
 ---
 
-## 2. Cấp quyền GitHub Actions để ghi Packages lên GHCR
+## 2. Kiến trúc Mạng, Port & Cơ chế Tải người dùng (User Scaling)
+
+Trong kiến trúc Web API / Microservices của Sync Flow:
+1. **Một cổng Gateway duy nhất cho toàn bộ người dùng**:
+   - Cổng Gateway (`8088` hoặc `80`/`443`) sử dụng socket multiplexing để xử lý đồng thời hàng chục ngàn kết nối của người dùng.
+   - Hệ thống **không bao giờ tăng thêm port ngoài host** cho từng người dùng kết nối vào.
+2. **Bảo mật và Scale container ngầm**:
+   - Trong `docker-compose.prod.yml`, các service nội bộ (`auth`, `task`, `vocab`) được cấu hình bằng `expose` (chỉ mở cổng trong mạng Docker `backend-net`), không bind cổng cố định ra ngoài máy chủ host.
+   - Nhờ đó, khi tải tăng cao, ta có thể scale thêm số lượng instance (ví dụ: `docker compose -f docker-compose.prod.yml up -d --scale task=3`) mà **không bao giờ bị lỗi xung đột cổng** (`port is already allocated`).
+
+---
+
+## 3. Chạy CI Cục bộ (Local CI Suite `backend/ci/`)
+
+Dự án cung cấp sẵn bộ script CI tại thư mục `backend/ci/` để lập trình viên có thể kiểm tra toàn diện trước khi push code:
+
+```bash
+# 1. Chạy CI cho 1 service cụ thể:
+bash ci/start-ci.sh auth
+bash ci/start-ci.sh task
+bash ci/start-ci.sh vocab
+bash ci/start-ci.sh gateway
+
+# 2. Chạy CI cho toàn bộ 4 services:
+bash ci/start-ci.sh all
+
+# 3. Chạy kèm build & publish Docker Image lên Registry:
+export IMAGE_REGISTRY=ghcr.io/thang2k6adu/sync-flow-backend
+export REGISTRY_USER=thang2k6adu
+export REGISTRY_TOKEN=ghp_xxxxxxxxxxxx
+bash ci/start-ci.sh auth
+```
+
+---
+
+## 4. Cấp quyền GitHub Actions để ghi Packages lên GHCR
 
 Để GitHub Actions tự động push Docker Image lên `ghcr.io` mà không gặp lỗi `403 Forbidden`, cậu chỉ cần bật thiết lập sau một lần trên GitHub:
 
@@ -36,7 +72,7 @@ Hệ thống CI/CD của Sync Flow Backend được xây dựng hoàn toàn tự
 
 ---
 
-## 3. Cấu hình Tự động Deploy lên VPS qua SSH (Tuỳ chọn)
+## 5. Cấu hình Tự động Deploy lên VPS qua SSH (Tuỳ chọn)
 
 Nếu cậu đã có máy chủ VPS Linux (Ubuntu / Debian), cậu thêm các Secret sau vào GitHub Repository:
 1. Vào **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
@@ -54,7 +90,7 @@ Nếu cậu đã có máy chủ VPS Linux (Ubuntu / Debian), cậu thêm các Se
 
 ---
 
-## 4. Chuẩn bị Server Production (Làm 1 lần duy nhất trên VPS)
+## 6. Chuẩn bị Server Production (Làm 1 lần duy nhất trên VPS)
 
 Trên máy chủ VPS:
 ```bash
@@ -75,14 +111,14 @@ docker compose -f docker-compose.prod.yml ps
 
 ---
 
-## 5. Kiểm thử API nhanh chóng (API Test Tooling)
+## 7. Kiểm thử API nhanh chóng (API Test Tooling)
 
 ### Cách 1: Chạy toàn bộ test tự động qua Gradle
 ```bash
 # Chạy toàn bộ test 4 microservices
 make test
 
-# Hoặc chạy riêng service từ vựng mới:
+# Hoặc chạy riêng service từ vựng:
 cd services/kruzetech-vocab && ./gradlew test
 ```
 
