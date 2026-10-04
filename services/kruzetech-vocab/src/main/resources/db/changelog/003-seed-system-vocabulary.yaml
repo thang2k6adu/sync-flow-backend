@@ -2,6 +2,7 @@ databaseChangeLog:
   - changeSet:
       id: 003-seed-system-vocabulary
       author: kruzetech
+      context: "!test"
       changes:
         - sqlFile:
             path: db/changelog/003-seed-system-vocabulary.sql
