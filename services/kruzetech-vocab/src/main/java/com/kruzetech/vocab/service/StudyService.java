@@ -36,20 +36,58 @@ public class StudyService {
     private final ReviewLogRepository reviewLogRepository;
     private final SrsEngine srsEngine;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StudyQueueResponse getStudyQueue(String userId, String deckId, int limit) {
         int safeLimit = Math.min(Math.max(limit, 1), 50);
         Instant now = Instant.now();
 
-        List<UserCardProgress> dueProgressList;
+        List<UserCardProgress> dueProgressList = new ArrayList<>();
         long totalDue;
 
         if (deckId != null && !deckId.isBlank()) {
-            dueProgressList = progressRepository.findDueCardsByDeck(userId, deckId, now, PageRequest.of(0, safeLimit));
+            dueProgressList.addAll(progressRepository.findDueCardsByDeck(userId, deckId, now, PageRequest.of(0, safeLimit)));
             totalDue = progressRepository.countDueCardsByDeck(userId, deckId, now);
+            if (dueProgressList.size() < safeLimit) {
+                int remaining = safeLimit - dueProgressList.size();
+                List<VocabCard> unstudied = cardRepository.findUnstudiedCardsByDeck(userId, deckId, PageRequest.of(0, remaining));
+                for (VocabCard card : unstudied) {
+                    UserCardProgress newProgress = UserCardProgress.builder()
+                            .id(new UserCardProgressId(userId, card.getId()))
+                            .state("new")
+                            .masteryLevel(1)
+                            .easeFactor(new BigDecimal("2.50"))
+                            .intervalDays(0)
+                            .repetitionCount(0)
+                            .lastExerciseIndex(0)
+                            .dueDate(now)
+                            .lapsesCount(0)
+                            .build();
+                    dueProgressList.add(progressRepository.save(newProgress));
+                    totalDue++;
+                }
+            }
         } else {
-            dueProgressList = progressRepository.findDueCards(userId, now, PageRequest.of(0, safeLimit));
+            dueProgressList.addAll(progressRepository.findDueCards(userId, now, PageRequest.of(0, safeLimit)));
             totalDue = progressRepository.countDueCards(userId, now);
+            if (dueProgressList.size() < safeLimit) {
+                int remaining = safeLimit - dueProgressList.size();
+                List<VocabCard> unstudied = cardRepository.findUnstudiedCards(userId, PageRequest.of(0, remaining));
+                for (VocabCard card : unstudied) {
+                    UserCardProgress newProgress = UserCardProgress.builder()
+                            .id(new UserCardProgressId(userId, card.getId()))
+                            .state("new")
+                            .masteryLevel(1)
+                            .easeFactor(new BigDecimal("2.50"))
+                            .intervalDays(0)
+                            .repetitionCount(0)
+                            .lastExerciseIndex(0)
+                            .dueDate(now)
+                            .lapsesCount(0)
+                            .build();
+                    dueProgressList.add(progressRepository.save(newProgress));
+                    totalDue++;
+                }
+            }
         }
 
         if (dueProgressList.isEmpty()) {

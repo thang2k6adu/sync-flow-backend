@@ -97,7 +97,7 @@ public class CardService {
 
     @Transactional(readOnly = true)
     public List<CardDto> listCardsByDeck(String deckId, String userId) {
-        deckRepository.findByIdAndUserId(deckId, userId)
+        deckRepository.findAccessibleById(deckId, userId)
                 .orElseThrow(() -> ApiException.notFound("Deck not found: " + deckId));
 
         List<VocabCard> cards = cardRepository.findByDeckIdOrderByCreatedAtAsc(deckId);

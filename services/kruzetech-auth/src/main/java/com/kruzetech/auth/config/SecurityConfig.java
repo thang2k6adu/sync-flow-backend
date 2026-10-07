@@ -25,7 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     /** Endpoint công khai (tương ứng @Public() bên Nest). Đường dẫn tính sau context-path /api. */
-    private static final String[] PUBLIC_POST = {"/auth/register", "/auth/firebase/login", "/auth/refresh"};
+    private static final String[] PUBLIC_POST = {"/auth/register", "/auth/firebase/login", "/auth/refresh", "/auth/login"};
 
     private static final String[] PUBLIC_GET = {
         "/health", "/actuator/health", "/actuator/health/**", "/docs", "/docs/**", "/swagger-ui/**", "/v3/api-docs/**"

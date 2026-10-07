@@ -32,14 +32,14 @@ public class DeckService {
 
     @Transactional(readOnly = true)
     public List<DeckDto> listDecks(String userId) {
-        return deckRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        return deckRepository.findAccessibleDecks(userId).stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public DeckDto getDeck(String id, String userId) {
-        Deck deck = deckRepository.findByIdAndUserId(id, userId)
+        Deck deck = deckRepository.findAccessibleById(id, userId)
                 .orElseThrow(() -> ApiException.notFound("Deck not found: " + id));
         return toDto(deck);
     }

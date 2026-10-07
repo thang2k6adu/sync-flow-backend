@@ -49,7 +49,7 @@ Swagger: `http://localhost:3000/api/docs` (auth), `http://localhost:3010/api/doc
 
 | Service | Method | Path | Quyền |
 |---|---|---|---|
-| auth | POST | `/auth/register` (201), `/auth/firebase/login`, `/auth/refresh` | public |
+| auth | POST | `/auth/register` (201), `/auth/login`, `/auth/firebase/login`, `/auth/refresh` | public |
 | auth | POST | `/auth/logout` | đăng nhập |
 | auth | GET/PATCH | `/users/profile` | đăng nhập |
 | auth | POST, GET(list), GET/PATCH/DELETE `/users/{id}` | | ADMIN (list và get: + MODERATOR) |

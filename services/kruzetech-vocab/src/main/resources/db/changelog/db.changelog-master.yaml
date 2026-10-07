@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/002-add-vocab-classification.yaml
   - include:
       file: db/changelog/003-seed-system-vocabulary.yaml
+  - include:
+      file: db/changelog/004-seed-additional-vocabulary.yaml
