@@ -60,6 +60,8 @@ public class DeckService {
                 deck.getCategory(),
                 deck.getIconUrl(),
                 deck.getCefrLevel(),
+                "system".equals(deck.getUserId()),
+                deck.getCardCount() != null ? deck.getCardCount() : 0,
                 deck.getCreatedAt());
     }
 }

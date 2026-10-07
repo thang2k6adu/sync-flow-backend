@@ -14,6 +14,12 @@ public interface VocabCardRepository extends JpaRepository<VocabCard, String> {
 
     List<VocabCard> findByDeckIdOrderByCreatedAtAsc(String deckId);
 
+    @Query("SELECT c FROM VocabCard c WHERE c.deckId = :deckId ORDER BY c.createdAt ASC")
+    List<VocabCard> findCardsByDeckPaginated(@Param("deckId") String deckId, Pageable pageable);
+
+    @Query("SELECT COUNT(c) FROM VocabCard c WHERE c.deckId = :deckId")
+    long countCardsByDeck(@Param("deckId") String deckId);
+
     List<VocabCard> findByIdIn(Collection<String> ids);
 
     @Query("SELECT c FROM VocabCard c WHERE c.deckId = :deckId AND NOT EXISTS ("

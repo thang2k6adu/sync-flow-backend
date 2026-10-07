@@ -16,19 +16,28 @@ public interface UserCardProgressRepository extends JpaRepository<UserCardProgre
 
     Optional<UserCardProgress> findByIdUserIdAndIdCardId(String userId, String cardId);
 
-    @Query("SELECT p FROM UserCardProgress p WHERE p.id.userId = :userId AND p.dueDate <= :now ORDER BY p.dueDate ASC")
+    @Query("SELECT p FROM UserCardProgress p WHERE p.id.userId = :userId AND p.dueDate <= :now AND p.state != 'new' ORDER BY p.dueDate ASC")
     List<UserCardProgress> findDueCards(@Param("userId") String userId, @Param("now") Instant now, Pageable pageable);
 
-    @Query("SELECT p FROM UserCardProgress p JOIN VocabCard c ON p.id.cardId = c.id WHERE p.id.userId = :userId AND c.deckId = :deckId AND p.dueDate <= :now ORDER BY p.dueDate ASC")
+    @Query("SELECT p FROM UserCardProgress p JOIN VocabCard c ON p.id.cardId = c.id WHERE p.id.userId = :userId AND c.deckId = :deckId AND p.dueDate <= :now AND p.state != 'new' ORDER BY p.dueDate ASC")
     List<UserCardProgress> findDueCardsByDeck(
             @Param("userId") String userId,
             @Param("deckId") String deckId,
             @Param("now") Instant now,
             Pageable pageable);
 
-    @Query("SELECT COUNT(p) FROM UserCardProgress p WHERE p.id.userId = :userId AND p.dueDate <= :now")
+    @Query("SELECT p FROM UserCardProgress p JOIN VocabCard c ON p.id.cardId = c.id WHERE p.id.userId = :userId AND c.deckId = :deckId AND p.state != 'new' ORDER BY p.dueDate ASC")
+    List<UserCardProgress> findAllProgressByDeck(
+            @Param("userId") String userId,
+            @Param("deckId") String deckId,
+            Pageable pageable);
+
+    @Query("SELECT COUNT(p) FROM UserCardProgress p WHERE p.id.userId = :userId AND p.dueDate <= :now AND p.state != 'new'")
     long countDueCards(@Param("userId") String userId, @Param("now") Instant now);
 
-    @Query("SELECT COUNT(p) FROM UserCardProgress p JOIN VocabCard c ON p.id.cardId = c.id WHERE p.id.userId = :userId AND c.deckId = :deckId AND p.dueDate <= :now")
+    @Query("SELECT COUNT(p) FROM UserCardProgress p JOIN VocabCard c ON p.id.cardId = c.id WHERE p.id.userId = :userId AND c.deckId = :deckId AND p.dueDate <= :now AND p.state != 'new'")
     long countDueCardsByDeck(@Param("userId") String userId, @Param("deckId") String deckId, @Param("now") Instant now);
+
+    @Query("SELECT COUNT(p) FROM UserCardProgress p JOIN VocabCard c ON p.id.cardId = c.id WHERE p.id.userId = :userId AND c.deckId = :deckId AND p.state != 'new'")
+    long countAllCardsByDeck(@Param("userId") String userId, @Param("deckId") String deckId);
 }

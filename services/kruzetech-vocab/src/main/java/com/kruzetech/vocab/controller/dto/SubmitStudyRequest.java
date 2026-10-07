@@ -8,4 +8,5 @@ public record SubmitStudyRequest(
         int timeSpentMs,
         int mistakesCount,
         boolean usedHint,
-        String manualRating) {}
+        String manualRating,
+        boolean isCram) {}

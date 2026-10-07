@@ -36,22 +36,33 @@ public class StudyService {
     private final ReviewLogRepository reviewLogRepository;
     private final SrsEngine srsEngine;
 
-    @Transactional
-    public StudyQueueResponse getStudyQueue(String userId, String deckId, int limit) {
-        int safeLimit = Math.min(Math.max(limit, 1), 50);
+    @Transactional(readOnly = true)
+    public StudyQueueResponse getReviewQueue(String userId, int limit, int page) {
+        int safeLimit = Math.min(Math.max(limit, 1), 100);
+        int safePage = Math.max(page, 0);
         Instant now = Instant.now();
+        PageRequest pageRequest = PageRequest.of(safePage, safeLimit);
+
+        List<UserCardProgress> dueProgressList = progressRepository.findDueCards(userId, now, pageRequest);
+        long totalDue = progressRepository.countDueCards(userId, now);
+
+        return buildQueueResponse(dueProgressList, totalDue);
+    }
+
+    @Transactional(readOnly = true)
+    public StudyQueueResponse getCramQueue(String userId, String deckId, int limit, int page) {
+        int safeLimit = Math.min(Math.max(limit, 1), 100);
+        int safePage = Math.max(page, 0);
+        Instant now = Instant.now();
+        PageRequest pageRequest = PageRequest.of(safePage, safeLimit);
+
+        List<VocabCard> deckCards = cardRepository.findCardsByDeckPaginated(deckId, pageRequest);
+        long totalDue = cardRepository.countCardsByDeck(deckId);
 
         List<UserCardProgress> dueProgressList = new ArrayList<>();
-        long totalDue;
-
-        if (deckId != null && !deckId.isBlank()) {
-            dueProgressList.addAll(progressRepository.findDueCardsByDeck(userId, deckId, now, PageRequest.of(0, safeLimit)));
-            totalDue = progressRepository.countDueCardsByDeck(userId, deckId, now);
-            if (dueProgressList.size() < safeLimit) {
-                int remaining = safeLimit - dueProgressList.size();
-                List<VocabCard> unstudied = cardRepository.findUnstudiedCardsByDeck(userId, deckId, PageRequest.of(0, remaining));
-                for (VocabCard card : unstudied) {
-                    UserCardProgress newProgress = UserCardProgress.builder()
+        for (VocabCard card : deckCards) {
+            UserCardProgress progress = progressRepository.findByIdUserIdAndIdCardId(userId, card.getId())
+                    .orElseGet(() -> UserCardProgress.builder()
                             .id(new UserCardProgressId(userId, card.getId()))
                             .state("new")
                             .masteryLevel(1)
@@ -61,35 +72,14 @@ public class StudyService {
                             .lastExerciseIndex(0)
                             .dueDate(now)
                             .lapsesCount(0)
-                            .build();
-                    dueProgressList.add(progressRepository.save(newProgress));
-                    totalDue++;
-                }
-            }
-        } else {
-            dueProgressList.addAll(progressRepository.findDueCards(userId, now, PageRequest.of(0, safeLimit)));
-            totalDue = progressRepository.countDueCards(userId, now);
-            if (dueProgressList.size() < safeLimit) {
-                int remaining = safeLimit - dueProgressList.size();
-                List<VocabCard> unstudied = cardRepository.findUnstudiedCards(userId, PageRequest.of(0, remaining));
-                for (VocabCard card : unstudied) {
-                    UserCardProgress newProgress = UserCardProgress.builder()
-                            .id(new UserCardProgressId(userId, card.getId()))
-                            .state("new")
-                            .masteryLevel(1)
-                            .easeFactor(new BigDecimal("2.50"))
-                            .intervalDays(0)
-                            .repetitionCount(0)
-                            .lastExerciseIndex(0)
-                            .dueDate(now)
-                            .lapsesCount(0)
-                            .build();
-                    dueProgressList.add(progressRepository.save(newProgress));
-                    totalDue++;
-                }
-            }
+                            .build());
+            dueProgressList.add(progress);
         }
 
+        return buildQueueResponse(dueProgressList, totalDue);
+    }
+
+    private StudyQueueResponse buildQueueResponse(List<UserCardProgress> dueProgressList, long totalDue) {
         if (dueProgressList.isEmpty()) {
             return new StudyQueueResponse(0, List.of());
         }
@@ -112,9 +102,20 @@ public class StudyService {
             CardExercise selectedExercise = null;
 
             if (!exercises.isEmpty()) {
-                // Thuật toán Round-Robin phân bổ câu bài tập tương ứng với các nghĩa
-                int selectedIndex = (progress.getLastExerciseIndex() + 1) % exercises.size();
-                selectedExercise = exercises.get(selectedIndex);
+                // Lọc bài tập theo masteryLevel: Level 2 chỉ được dùng sentence_builder
+                List<CardExercise> validExercises = exercises;
+                if (progress.getMasteryLevel() == 2) {
+                    List<CardExercise> filtered = exercises.stream()
+                            .filter(e -> "sentence_builder".equals(e.getExerciseType()))
+                            .toList();
+                    if (!filtered.isEmpty()) {
+                        validExercises = filtered;
+                    }
+                }
+
+                // Thuật toán Round-Robin phân bổ bài tập
+                int selectedIndex = (progress.getLastExerciseIndex() + 1) % validExercises.size();
+                selectedExercise = validExercises.get(selectedIndex);
             }
 
             CardExerciseDto exerciseDto = selectedExercise != null ? toExerciseDto(selectedExercise) : null;
@@ -175,22 +176,27 @@ public class StudyService {
             nextExIdx = (progress.getLastExerciseIndex() + 1) % exercises.size();
         }
 
-        // Xác định state mới
-        String newState = "review";
-        if (result.getNewLevel() >= 3 && result.getNewIntervalDays() >= 21) {
-            newState = "mastered";
-        } else if (result.getNewRepetitionCount() == 0) {
-            newState = "learning";
+        boolean isNewCard = "new".equals(progress.getState());
+
+        if (!request.isCram() || isNewCard) {
+            // Xác định state mới
+            String newState = "review";
+            if (result.getNewLevel() >= 3 && result.getNewIntervalDays() >= 21) {
+                newState = "mastered";
+            } else if (result.getNewRepetitionCount() == 0) {
+                newState = "learning";
+            }
+
+            progress.setState(newState);
+            progress.setMasteryLevel(result.getNewLevel());
+            progress.setEaseFactor(result.getNewEaseFactor());
+            progress.setIntervalDays(result.getNewIntervalDays());
+            progress.setRepetitionCount(result.getNewRepetitionCount());
+            progress.setLapsesCount(result.getNewLapsesCount());
+            progress.setDueDate(result.getNewDueDate());
+            progress.setLastReviewedAt(Instant.now());
         }
 
-        progress.setState(newState);
-        progress.setMasteryLevel(result.getNewLevel());
-        progress.setEaseFactor(result.getNewEaseFactor());
-        progress.setIntervalDays(result.getNewIntervalDays());
-        progress.setRepetitionCount(result.getNewRepetitionCount());
-        progress.setLapsesCount(result.getNewLapsesCount());
-        progress.setDueDate(result.getNewDueDate());
-        progress.setLastReviewedAt(Instant.now());
         progress.setLastExerciseIndex(nextExIdx);
 
         progressRepository.save(progress);

@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,9 +30,19 @@ public class StudyController {
     @Operation(summary = "Lấy danh sách các thẻ từ vựng tới hạn ôn tập (phân bổ bài tập xoay vòng Round-Robin)")
     public StudyQueueResponse getQueue(
             @AuthenticationPrincipal AuthUser user,
-            @RequestParam(required = false) String deckId,
-            @RequestParam(defaultValue = "20") int limit) {
-        return studyService.getStudyQueue(user.id(), deckId, limit);
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "0") int page) {
+        return studyService.getReviewQueue(user.id(), limit, page);
+    }
+
+    @GetMapping("/decks/{deckId}/queue")
+    @Operation(summary = "Lấy toàn bộ danh sách thẻ trong bộ từ (Cram mode)")
+    public StudyQueueResponse getDeckQueue(
+            @AuthenticationPrincipal AuthUser user,
+            @PathVariable String deckId,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "0") int page) {
+        return studyService.getCramQueue(user.id(), deckId, limit, page);
     }
 
     @PostMapping("/submit")

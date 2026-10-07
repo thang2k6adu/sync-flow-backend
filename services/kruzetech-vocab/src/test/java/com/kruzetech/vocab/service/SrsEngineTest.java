@@ -99,14 +99,14 @@ class SrsEngineTest {
     }
 
     @Test
-    @DisplayName("SRS SM-2: Xử lý Leech Card khi số lần quên >= 5")
+    @DisplayName("SRS SM-2: Xử lý Leech Card khi số lần quên >= 1")
     void testLeechCardDetection() {
         UserCardProgress progress = UserCardProgress.builder()
                 .masteryLevel(1)
                 .easeFactor(new BigDecimal("1.70"))
                 .intervalDays(1)
                 .repetitionCount(1)
-                .lapsesCount(4)
+                .lapsesCount(0)
                 .dueDate(Instant.now())
                 .build();
 
@@ -116,7 +116,7 @@ class SrsEngineTest {
 
         SrsEngine.SrsResult result = srsEngine.calculateNextState(progress, telemetry);
 
-        assertEquals(5, result.getNewLapsesCount());
+        assertEquals(1, result.getNewLapsesCount());
         assertTrue(result.isLeech());
     }
 

@@ -10,4 +10,6 @@ public record DeckDto(
         String category,
         String iconUrl,
         String cefrLevel,
+        boolean isSystem,
+        int cardCount,
         Instant createdAt) {}

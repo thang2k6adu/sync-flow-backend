@@ -47,6 +47,9 @@ public class Deck {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @org.hibernate.annotations.Formula("(SELECT count(*) FROM vocab_cards c WHERE c.deck_id = id)")
+    private Integer cardCount;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {
