@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-gamification
+      author: kruzetech
+      # Chạy sau 001 nên bảng users đã tồn tại: thêm cột gamification còn thiếu.
+      preConditions:
+        onFail: MARK_RAN
+        and:
+          # LOWER() để chạy được cả H2 (identifier lưu hoa: USERS) lẫn Postgres (users).
+          - sqlCheck:
+              expectedResult: 1
+              sql: SELECT COUNT(*) FROM information_schema.tables WHERE LOWER(table_name) = 'users'
+          - not:
+              sqlCheck:
+                expectedResult: 7
+                sql: >-
+                  SELECT COUNT(*) FROM information_schema.columns
+                  WHERE LOWER(table_name) = 'users' AND LOWER(column_name) IN
+                  ('total_exp','current_exp','level','streak','words_mastered','total_reviews','last_study_date')
+      changes:
+        - sql:
+            # Chạy được cả Postgres và H2 (MODE=PostgreSQL): mỗi cột một lệnh riêng.
+            splitStatements: true
+            stripComments: true
+            sql: >-
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS total_exp INT DEFAULT 0 NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS current_exp INT DEFAULT 0 NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS level INT DEFAULT 1 NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS streak INT DEFAULT 0 NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS words_mastered INT DEFAULT 0 NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS total_reviews INT DEFAULT 0 NOT NULL;
+              ALTER TABLE users ADD COLUMN IF NOT EXISTS last_study_date TIMESTAMP WITH TIME ZONE;
+              CREATE INDEX IF NOT EXISTS idx_users_total_exp ON users(total_exp);

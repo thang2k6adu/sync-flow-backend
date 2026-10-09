@@ -2,6 +2,9 @@ package com.kruzetech.auth.controller;
 
 import com.kruzetech.auth.controller.dto.AuthDtos.MessageResponse;
 import com.kruzetech.auth.controller.dto.UserDtos.CreateUserRequest;
+import com.kruzetech.auth.controller.dto.UserDtos.LeaderboardResponse;
+import com.kruzetech.auth.controller.dto.UserDtos.ProgressionResponse;
+import com.kruzetech.auth.controller.dto.UserDtos.UpdateProgressionRequest;
 import com.kruzetech.auth.controller.dto.UserDtos.UpdateUserRequest;
 import com.kruzetech.auth.controller.dto.UserDtos.UserResponse;
 import com.kruzetech.auth.core.PageResponse;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,9 +66,42 @@ public class UserController {
     }
 
     @PatchMapping("/profile")
-    @Operation(summary = "Update current user profile")
-    public UserResponse updateProfile(@AuthenticationPrincipal AuthUser user, @Valid @RequestBody UpdateUserRequest req) {
-        return userService.update(user.id(), req);
+    @Operation(summary = "Update current user profile (name, avatar)")
+    public UserResponse patchProfile(
+            @AuthenticationPrincipal AuthUser user, @RequestBody java.util.Map<String, Object> body) {
+        String name = body.get("name") != null ? String.valueOf(body.get("name")) : null;
+        String avatar = body.get("avatar") != null ? String.valueOf(body.get("avatar")) : null;
+        return userService.updateProfile(user.id(), name, avatar);
+    }
+
+    @PutMapping("/profile")
+    @Operation(summary = "Update current user profile (PUT alias for Flutter)")
+    public UserResponse putProfile(
+            @AuthenticationPrincipal AuthUser user, @RequestBody java.util.Map<String, Object> body) {
+        String name = body.get("name") != null ? String.valueOf(body.get("name")) : null;
+        String avatar = body.get("avatar") != null ? String.valueOf(body.get("avatar")) : null;
+        return userService.updateProfile(user.id(), name, avatar);
+    }
+
+    @GetMapping("/progression")
+    @Operation(summary = "Get my gamification progression (EXP, streak)")
+    public ProgressionResponse progression(@AuthenticationPrincipal AuthUser user) {
+        return userService.getProgression(user.id());
+    }
+
+    @PostMapping("/progression/add")
+    @Operation(summary = "Sync EXP / study stats from app")
+    public ProgressionResponse addProgression(
+            @AuthenticationPrincipal AuthUser user, @RequestBody(required = false) UpdateProgressionRequest req) {
+        return userService.addProgression(user.id(), req);
+    }
+
+    @GetMapping("/leaderboard")
+    @Operation(summary = "Global leaderboard sorted by total EXP")
+    public LeaderboardResponse leaderboard(
+            @AuthenticationPrincipal AuthUser user,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
+        return userService.leaderboard(user.id(), limit);
     }
 
     @GetMapping("/{id}")

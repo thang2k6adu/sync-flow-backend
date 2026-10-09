@@ -4,7 +4,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -141,5 +143,49 @@ class AuthFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ok"))
                 .andExpect(jsonPath("$.data.database").value("connected"));
+    }
+
+    @Test
+    void profileUpdateProgressionAndLeaderboard() throws Exception {
+        JsonNode reg = call(
+                json(post("/auth/register"), "{\"email\":\"g@example.com\",\"password\":\"secret1\",\"firstName\":\"G\"}"),
+                201);
+        String access = reg.at("/data/tokens/accessToken").asText();
+
+        // App Flutter gửi PUT /users/profile {name, avatar}
+        JsonNode updated = call(
+                json(put("/users/profile").header("Authorization", "Bearer " + access),
+                        "{\"name\":\"Gamer One\",\"avatar\":\"https://example.com/a.png\"}"),
+                200);
+        org.junit.jupiter.api.Assertions.assertEquals("Gamer One", updated.at("/data/name").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("https://example.com/a.png", updated.at("/data/avatar").asText());
+
+        // PATCH alias cũng phải chạy
+        mvc.perform(patch("/users/profile").header("Authorization", "Bearer " + access)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Gamer Two\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("Gamer Two"));
+
+        // Progression ban đầu toàn 0, level 1
+        mvc.perform(get("/users/progression").header("Authorization", "Bearer " + access))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalExp").value(0))
+                .andExpect(jsonPath("$.data.level").value(1));
+
+        // Cộng EXP như app học xong 1 thẻ dễ (+15 EXP, +1 từ thuộc)
+        JsonNode synced = call(
+                json(post("/users/progression/add").header("Authorization", "Bearer " + access),
+                        "{\"expGained\":15,\"cardStudied\":true,\"wordMastered\":true}"),
+                200);
+        org.junit.jupiter.api.Assertions.assertEquals(15, synced.at("/data/totalExp").asInt());
+        org.junit.jupiter.api.Assertions.assertEquals(1, synced.at("/data/wordsMastered").asInt());
+        org.junit.jupiter.api.Assertions.assertEquals(1, synced.at("/data/streak").asInt());
+
+        // Bảng xếp hạng có chính mình ở hạng 1 (DB test chỉ có user này + admin seed)
+        mvc.perform(get("/users/leaderboard").header("Authorization", "Bearer " + access))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.myStanding.isCurrentUser").value(true))
+                .andExpect(jsonPath("$.data.myStanding.exp").value(15))
+                .andExpect(jsonPath("$.data.totalMembers").isNumber());
     }
 }
